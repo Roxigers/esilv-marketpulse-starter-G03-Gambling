@@ -2,6 +2,7 @@ from pathlib import Path
 import csv
 import json
 
+from providers.bloomberg_provider import ACCESS_MODE, fetch_bloomberg_prices
 from analytics import (
     align_series,
     calculate_base_100,
@@ -9,11 +10,9 @@ from analytics import (
     calculate_relative_performance,
 )
 
+
 DATA_DIR = Path("data/sample")
 
-# These starter values mirror config/settings.yml.
-# settings.yml is a human-readable configuration contract in the CORE.
-# Parsing YAML is optional and is not required by the 18-hour lab sequence.
 LOOKBACK_LABEL = "1 month"
 INTERVAL_LABEL = "Daily"
 PROVIDER_LABEL = "CSV"
@@ -46,10 +45,14 @@ def filter_prices(prices, ticker):
 
 
 def get_first_close(prices):
+    if not prices:
+        raise ValueError("No prices available.")
     return float(prices[0]["close"])
 
 
 def get_last_close(prices):
+    if not prices:
+        raise ValueError("No prices available.")
     return float(prices[-1]["close"])
 
 
@@ -62,78 +65,106 @@ def get_last_date(prices):
 
 
 def display_market_summary(asset, prices, show_currency=True):
-    suffix = f" {asset['currency']}" if show_currency else ""
+    first_close = get_first_close(prices)
+    last_close = get_last_close(prices)
+
     print(f"{asset['ticker']} - {asset['name']}")
     print(f"Market       : {asset['market']}")
     print(f"Observations : {len(prices)}")
     print(f"First date   : {get_first_date(prices)}")
     print(f"Last date    : {get_last_date(prices)}")
-    print(f"First close  : {get_first_close(prices):.2f}{suffix}")
-    print(f"Last close   : {get_last_close(prices):.2f}{suffix}")
+    print(
+        "First close  : "
+        + f"{first_close:.2f}"
+        + (f" {asset['currency']}" if show_currency else "")
+    )
+    print(
+        "Last close   : "
+        + f"{last_close:.2f}"
+        + (f" {asset['currency']}" if show_currency else "")
+    )
 
 
-def main():
+def build_market_snapshot():
     instruments = load_instruments()
-    normalized_prices = [
-        normalize_price_row(row)
-        for row in load_prices()
-    ]
-
     instrument = instruments["instrument"]
     benchmark = instruments["benchmark"]
 
-    instrument_prices = filter_prices(normalized_prices, instrument["ticker"])
-    benchmark_prices = filter_prices(normalized_prices, benchmark["ticker"])
+    instrument_prices = fetch_bloomberg_prices(instrument["ticker"])
+    benchmark_prices = fetch_bloomberg_prices(benchmark["ticker"])
 
     aligned_instrument, aligned_benchmark = align_series(
-        instrument_prices,
-        benchmark_prices,
+        instrument_prices, benchmark_prices
     )
-
-    if not aligned_instrument:
-        raise ValueError("No common observation dates found")
 
     instrument_return = calculate_period_return(aligned_instrument)
     benchmark_return = calculate_period_return(aligned_benchmark)
-    relative_performance = calculate_relative_performance(
-        instrument_return,
-        benchmark_return,
-    )
-    instrument_base_100 = calculate_base_100(aligned_instrument)
-    benchmark_base_100 = calculate_base_100(aligned_benchmark)
+
+    return {
+        "provider": "Bloomberg stage",
+        "access_mode": ACCESS_MODE,
+        "lookback": LOOKBACK_LABEL,
+        "interval": INTERVAL_LABEL,
+        "instrument": instrument,
+        "benchmark": benchmark,
+        "instrument_prices": aligned_instrument,
+        "benchmark_prices": aligned_benchmark,
+        "instrument_return": instrument_return,
+        "benchmark_return": benchmark_return,
+        "relative_performance": calculate_relative_performance(
+            instrument_return, benchmark_return
+        ),
+        "instrument_base_100": calculate_base_100(aligned_instrument),
+        "benchmark_base_100": calculate_base_100(aligned_benchmark),
+    }
+
+
+def main():
+    snapshot = build_market_snapshot()
+
+    instrument = snapshot["instrument"]
+    benchmark = snapshot["benchmark"]
+    instrument_base = snapshot["instrument_base_100"]
+    benchmark_base = snapshot["benchmark_base_100"]
 
     print("=== MarketPulse ===")
     print()
+    print("Provider")
+    print(snapshot["provider"])
+    print()
+    print("Access mode")
+    print(snapshot["access_mode"])
+    print()
     print("Market configuration")
-    print(f"Period   : {LOOKBACK_LABEL}")
-    print(f"Interval : {INTERVAL_LABEL}")
-    print(f"Provider : {PROVIDER_LABEL}")
+    print(f"Period   : {snapshot['lookback']}")
+    print(f"Interval : {snapshot['interval']}")
     print()
     print("Instrument")
-    display_market_summary(instrument, aligned_instrument)
-    print(f"Period return : {instrument_return:.2f}%")
+    display_market_summary(instrument, snapshot["instrument_prices"])
     print()
     print("Benchmark")
-    display_market_summary(benchmark, aligned_benchmark, show_currency=False)
-    print(f"Period return : {benchmark_return:.2f}%")
+    display_market_summary(
+        benchmark, snapshot["benchmark_prices"], show_currency=False
+    )
+    print()
+    print("Period return")
+    print(f"{instrument['ticker']}: {snapshot['instrument_return']:.2f}%")
+    print(f"{benchmark['ticker']}: {snapshot['benchmark_return']:.2f}%")
     print()
     print("Relative performance")
-    relative_sign = "+" if relative_performance >= 0 else ""
     print(
-        f"{instrument['ticker']} vs {benchmark['ticker']} : "
-        f"{relative_sign}{relative_performance:.2f} percentage points"
+        f"{instrument['ticker']} vs {benchmark['ticker']}: "
+        f"{snapshot['relative_performance']:+.2f} percentage points"
     )
     print()
     print("Base 100")
     print(
-        f"{instrument['ticker']}  : "
-        f"{instrument_base_100[0]['value']:.2f} -> "
-        f"{instrument_base_100[-1]['value']:.2f}"
+        f"{instrument['ticker']}: {instrument_base[0]['value']:.2f} -> "
+        f"{instrument_base[-1]['value']:.2f}"
     )
     print(
-        f"{benchmark['ticker']} : "
-        f"{benchmark_base_100[0]['value']:.2f} -> "
-        f"{benchmark_base_100[-1]['value']:.2f}"
+        f"{benchmark['ticker']}: {benchmark_base[0]['value']:.2f} -> "
+        f"{benchmark_base[-1]['value']:.2f}"
     )
 
 
