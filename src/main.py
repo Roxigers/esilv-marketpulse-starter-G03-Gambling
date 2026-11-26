@@ -2,6 +2,7 @@ from pathlib import Path
 import csv
 import json
 
+from providers.yahoo_provider import YAHOO_SYMBOLS, fetch_yahoo_prices
 from analytics import (
     align_series,
     calculate_base_100,
@@ -85,15 +86,27 @@ def display_market_summary(asset, prices, show_currency=True):
 
 def main():
     instruments = load_instruments()
-    prices = [normalize_price_row(row) for row in load_prices()]
 
     instrument = instruments["instrument"]
     benchmark = instruments["benchmark"]
 
-    instrument_prices = filter_prices(prices, instrument["ticker"])
-    benchmark_prices = filter_prices(prices, benchmark["ticker"])
+    instrument_prices = fetch_yahoo_prices(
+        symbol=YAHOO_SYMBOLS[instrument["ticker"]],
+        canonical_ticker=instrument["ticker"],
+        period="1mo",
+        interval="1d",
+    )
+    benchmark_prices = fetch_yahoo_prices(
+        symbol=YAHOO_SYMBOLS[benchmark["ticker"]],
+        canonical_ticker=benchmark["ticker"],
+        period="1mo",
+        interval="1d",
+    )
 
     print("=== MarketPulse ===")
+    print()
+    print("Provider")
+    print("Yahoo Finance via yfinance")
     print()
     print("Market configuration")
     print(f"Period   : {LOOKBACK_LABEL}")
