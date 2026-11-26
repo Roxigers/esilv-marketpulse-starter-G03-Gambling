@@ -62,7 +62,7 @@ def get_last_date(prices):
     return prices[-1]["date"]
 
 
-def display_market_summary(asset, prices, show_currency=False):
+def display_market_summary(asset, prices, show_currency=True):
     first_close = get_first_close(prices)
     last_close = get_last_close(prices)
 
@@ -102,7 +102,7 @@ def main():
     display_market_summary(instrument, instrument_prices)
     print()
     print("Benchmark")
-    display_market_summary(benchmark, benchmark_prices)
+    display_market_summary(benchmark, benchmark_prices, show_currency=False)
     print()
 
     aligned_instrument, aligned_benchmark = align_series(
