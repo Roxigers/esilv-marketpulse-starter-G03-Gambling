@@ -1,3 +1,4 @@
+
 from pathlib import Path
 import csv
 import json
@@ -9,14 +10,19 @@ from analytics import (
     calculate_relative_performance,
 )
 
+from providers.yahoo_provider import fetch_yahoo_prices
+
+
 DATA_DIR = Path("data/sample")
 
-# These starter values mirror config/settings.yml.
-# settings.yml is a human-readable configuration contract in the CORE.
-# Parsing YAML is optional and is not required by the 18-hour lab sequence.
 LOOKBACK_LABEL = "1 month"
 INTERVAL_LABEL = "Daily"
-PROVIDER_LABEL = "CSV"
+PROVIDER_LABEL = "Yahoo Finance"
+
+YAHOO_SYMBOLS = {
+    "AAPL": "AAPL",
+    "SP500": "^GSPC",
+}
 
 
 def load_instruments():
@@ -74,16 +80,22 @@ def display_market_summary(asset, prices, show_currency=True):
 
 def main():
     instruments = load_instruments()
-    normalized_prices = [
-        normalize_price_row(row)
-        for row in load_prices()
-    ]
 
     instrument = instruments["instrument"]
     benchmark = instruments["benchmark"]
 
-    instrument_prices = filter_prices(normalized_prices, instrument["ticker"])
-    benchmark_prices = filter_prices(normalized_prices, benchmark["ticker"])
+    instrument_symbol = YAHOO_SYMBOLS[instrument["ticker"]]
+    benchmark_symbol = YAHOO_SYMBOLS[benchmark["ticker"]]
+
+    instrument_prices = fetch_yahoo_prices(
+        instrument_symbol,
+        instrument["ticker"],
+    )
+
+    benchmark_prices = fetch_yahoo_prices(
+        benchmark_symbol,
+        benchmark["ticker"],
+    )
 
     aligned_instrument, aligned_benchmark = align_series(
         instrument_prices,
@@ -95,10 +107,12 @@ def main():
 
     instrument_return = calculate_period_return(aligned_instrument)
     benchmark_return = calculate_period_return(aligned_benchmark)
+
     relative_performance = calculate_relative_performance(
         instrument_return,
         benchmark_return,
     )
+
     instrument_base_100 = calculate_base_100(aligned_instrument)
     benchmark_base_100 = calculate_base_100(aligned_benchmark)
 
