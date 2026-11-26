@@ -2,6 +2,13 @@ from pathlib import Path
 import csv
 import json
 
+from analytics import (
+    align_series,
+    calculate_base_100,
+    calculate_period_return,
+    calculate_relative_performance,
+)
+
 
 DATA_DIR = Path("data/sample")
 
@@ -17,6 +24,18 @@ def load_instruments():
 def load_prices():
     with open(DATA_DIR / "prices.csv", encoding="utf-8") as file:
         return list(csv.DictReader(file))
+
+
+def normalize_price_row(row):
+    return {
+        "date": row["date"],
+        "ticker": row["ticker"],
+        "open": float(row["open"]),
+        "high": float(row["high"]),
+        "low": float(row["low"]),
+        "close": float(row["close"]),
+        "volume": int(row["volume"]),
+    }
 
 
 def filter_prices(prices, ticker):
@@ -38,10 +57,12 @@ def get_last_close(prices):
 def get_first_date(prices):
     return prices[0]["date"]
 
+
 def get_last_date(prices):
     return prices[-1]["date"]
 
-def display_market_summary(asset, prices, show_currency=True):
+
+def display_market_summary(asset, prices, show_currency=False):
     first_close = get_first_close(prices)
     last_close = get_last_close(prices)
 
@@ -63,7 +84,7 @@ def display_market_summary(asset, prices, show_currency=True):
 
 def main():
     instruments = load_instruments()
-    prices = load_prices()
+    prices = [normalize_price_row(row) for row in load_prices()]
 
     instrument = instruments["instrument"]
     benchmark = instruments["benchmark"]
@@ -82,6 +103,27 @@ def main():
     print()
     print("Benchmark")
     display_market_summary(benchmark, benchmark_prices)
+    print()
+
+    aligned_instrument, aligned_benchmark = align_series(
+        instrument_prices, benchmark_prices
+    )
+    instrument_return = calculate_period_return(aligned_instrument)
+    benchmark_return = calculate_period_return(aligned_benchmark)
+    relative = calculate_relative_performance(instrument_return, benchmark_return)
+    instrument_base = calculate_base_100(aligned_instrument)
+    benchmark_base = calculate_base_100(aligned_benchmark)
+
+    print("Period return")
+    print(f"{instrument['ticker']}: {instrument_return:.2f}%")
+    print(f"{benchmark['ticker']}: {benchmark_return:.2f}%")
+    print()
+    print("Relative performance")
+    print(f"{instrument['ticker']} vs {benchmark['ticker']}: {relative:+.2f} percentage points")
+    print()
+    print("Base 100")
+    print(f"{instrument['ticker']}: {instrument_base[0]['value']:.2f} -> {instrument_base[-1]['value']:.2f}")
+    print(f"{benchmark['ticker']}: {benchmark_base[0]['value']:.2f} -> {benchmark_base[-1]['value']:.2f}")
 
 
 if __name__ == "__main__":
