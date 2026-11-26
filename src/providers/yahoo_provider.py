@@ -1,5 +1,10 @@
-
 import yfinance as yf
+
+
+YAHOO_SYMBOLS = {
+    "AAPL": "AAPL",
+    "SP500": "^GSPC",
+}
 
 
 def fetch_yahoo_prices(
@@ -15,9 +20,7 @@ def fetch_yahoo_prices(
     )
 
     if history.empty:
-        raise ValueError(
-            f"No Yahoo Finance data returned for {symbol}"
-        )
+        raise ValueError(f"No Yahoo Finance data returned for {symbol}")
 
     rows = []
 
