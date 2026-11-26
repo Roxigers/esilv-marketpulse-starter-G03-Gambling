@@ -1,3 +1,4 @@
+
 from pathlib import Path
 import csv
 import json
@@ -15,7 +16,12 @@ DATA_DIR = Path("data/sample")
 
 LOOKBACK_LABEL = "1 month"
 INTERVAL_LABEL = "Daily"
-PROVIDER_LABEL = "CSV"
+PROVIDER_LABEL = "Yahoo Finance"
+
+YAHOO_SYMBOLS = {
+    "AAPL": "AAPL",
+    "SP500": "^GSPC",
+}
 
 
 def load_instruments():
