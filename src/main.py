@@ -9,7 +9,7 @@ from analytics import (
     calculate_relative_performance,
 )
 from providers.yahoo_provider import fetch_yahoo_prices, YAHOO_SYMBOLS
-
+from providers.bloomberg_provider import fetch_bloomberg_prices, ACCESS_MODE
 DATA_DIR = Path("data/sample")
 
 # These starter values mirror config/settings.yml.
@@ -17,7 +17,7 @@ DATA_DIR = Path("data/sample")
 # Parsing YAML is optional and is not required by the 18-hour lab sequence.
 LOOKBACK_LABEL = "1 month"
 INTERVAL_LABEL = "Daily"
-PROVIDER_LABEL = "Yahoo Finance via yfinance"
+PROVIDER_LABEL = "Bloomberg stage"
 
 
 def load_instruments():
@@ -73,26 +73,13 @@ def display_market_summary(asset, prices, show_currency=True):
     print(f"Last close   : {get_last_close(prices):.2f}{suffix}")
 
 
-def main():
+def build_market_snapshot():
     instruments = load_instruments()
-
     instrument = instruments["instrument"]
     benchmark = instruments["benchmark"]
 
-   
-    instrument_prices = fetch_yahoo_prices(
-        symbol=YAHOO_SYMBOLS[instrument["ticker"]],
-        canonical_ticker=instrument["ticker"],
-        period="1mo",
-        interval="1d",
-    )
-
-    benchmark_prices = fetch_yahoo_prices(
-        symbol=YAHOO_SYMBOLS[benchmark["ticker"]],
-        canonical_ticker=benchmark["ticker"],
-        period="1mo",
-        interval="1d",
-    )
+    instrument_prices = fetch_bloomberg_prices(instrument["ticker"])
+    benchmark_prices = fetch_bloomberg_prices(benchmark["ticker"])
 
     aligned_instrument, aligned_benchmark = align_series(
         instrument_prices,
@@ -101,12 +88,47 @@ def main():
 
     instrument_return = calculate_period_return(aligned_instrument)
     benchmark_return = calculate_period_return(aligned_benchmark)
+
     relative_performance = calculate_relative_performance(
         instrument_return,
         benchmark_return,
     )
+
     instrument_base_100 = calculate_base_100(aligned_instrument)
     benchmark_base_100 = calculate_base_100(aligned_benchmark)
+
+    return {
+        "provider": PROVIDER_LABEL,
+        "access_mode": ACCESS_MODE,
+        "lookback": LOOKBACK_LABEL,
+        "interval": INTERVAL_LABEL,
+        "instrument": instrument,
+        "benchmark": benchmark,
+        "instrument_prices": instrument_prices,
+        "benchmark_prices": benchmark_prices,
+        "instrument_return": instrument_return,
+        "benchmark_return": benchmark_return,
+        "relative_performance": relative_performance,
+        "instrument_base_100": instrument_base_100,
+        "benchmark_base_100": benchmark_base_100,
+    }
+
+
+def main():
+    snapshot = build_market_snapshot()
+
+    instrument = snapshot["instrument"]
+    benchmark = snapshot["benchmark"]
+
+    instrument_prices = snapshot["instrument_prices"]
+    benchmark_prices = snapshot["benchmark_prices"]
+
+    instrument_return = snapshot["instrument_return"]
+    benchmark_return = snapshot["benchmark_return"]
+    relative_performance = snapshot["relative_performance"]
+
+    instrument_base_100 = snapshot["instrument_base_100"]
+    benchmark_base_100 = snapshot["benchmark_base_100"]
 
     print("=== MarketPulse ===")
     print()
@@ -114,6 +136,7 @@ def main():
     print(f"Period   : {LOOKBACK_LABEL}")
     print(f"Interval : {INTERVAL_LABEL}")
     print(f"Provider : {PROVIDER_LABEL}")
+    print(f"Access mode : {ACCESS_MODE}")
     print()
     print("Instrument")
     display_market_summary(instrument, instrument_prices)
