@@ -9,6 +9,7 @@ app = Dash(__name__)
 snapshot = build_market_snapshot()
 
 provider = snapshot["provider"]
+access_mode = snapshot["access_mode"]
 lookback = snapshot["lookback"]
 interval = snapshot["interval"]
 
@@ -26,6 +27,7 @@ benchmark_base_100 = snapshot["benchmark_base_100"]
 context = html.Div(
     [
         html.P(f"Provider: {provider}"),
+        html.P(f"Access Mode: {access_mode}"),
         html.P(
             f"Instrument: "
             f"{instrument['ticker']} - {instrument['name']}"
