@@ -1,89 +1,128 @@
 # Bloomberg Field Mapping
 
-## Access mode
+## 1. Purpose
 
-APPROVED_SAMPLE
+This document defines the mapping contract between the Bloomberg reference
+input and the canonical MarketPulse data format.
 
-- Source: `data/sample/bloomberg_reference_sample.json`
-- Expected canonical reference: `data/sample/bloomberg_reference_expected.json`
-- Live connectivity: not demonstrated
-- The sample states `is_live_bloomberg_output: false`. It contains illustrative
-  teaching values and is not certified Bloomberg historical data.
+It is a handoff document for TD10. It does not implement a Bloomberg provider.
 
-## Market instruments
+## 2. Access mode
+
+**Selected mode: `APPROVED_SAMPLE`**
+
+The repository contains an approved fallback sample fixture. This work does
+not demonstrate live Bloomberg connectivity.
+
+The sample identifies itself as an instructor-approved fallback fixture.
+Its values are illustrative teaching values reused from
+`data/sample/prices.csv`; they are not certified Bloomberg historical
+observations.
+
+## 3. Source files and limitations
+
+Input fixture:
+
+- `data/sample/bloomberg_reference_sample.json`
+
+Expected canonical output:
+
+- `data/sample/bloomberg_reference_expected.json`
+
+The separate instructor reference document
+`docs/10_BLOOMBERG_INSTRUCTOR_REFERENCE.md` was not present in this
+repository checkout.
+
+The mapping below is therefore based on the actual sample fixture and its
+metadata.
+
+## 4. Instrument and benchmark identifiers
 
 | Role | Canonical ticker | Bloomberg identifier |
 |---|---|---|
-| Instrument | AAPL | AAPL US Equity |
-| Benchmark | SP500 | SPX Index |
+| Instrument | `AAPL` | `AAPL US Equity` |
+| Benchmark | `SP500` | `SPX Index` |
 
-Provider identifiers by stage:
+The canonical tickers must be preserved in MarketPulse output.
+Bloomberg identifiers must not replace canonical tickers.
 
-| Canonical | CSV | Yahoo | Bloomberg |
-|---|---|---|---|
-| AAPL | AAPL | AAPL | AAPL US Equity |
-| SP500 | SP500 | ^GSPC | SPX Index |
+## 5. Input structure
 
-The analytical layer keeps receiving `AAPL` and `SP500`, never a provider identifier.
+The sample contains a `series` collection.
 
-## Inspected inputs
+Each series includes:
 
-### Instrument: `AAPL US Equity` (canonical ticker `AAPL`)
+- `role`: identifies the instrument or benchmark.
+- `canonical_ticker`: MarketPulse ticker.
+- `provider_identifier`: Bloomberg-style identifier.
+- `observations`: collection of observations.
 
-- 21 observations, from 2026-09-01 to 2026-09-30
-- Date representation: string `YYYY-MM-DD` in `observation_date`
-- Structure: `series[]` entries with `role`, `canonical_ticker`,
-  `provider_identifier` and a list `observations[]`
-- Available fields: `observation_date`, `open_value`, `high_value`,
-  `low_value`, `close_value`, `volume_value`
-- Missing values: none observed
+Both the instrument and benchmark contain 21 observations in the sample.
 
-### Benchmark: `SPX Index` (canonical ticker `SP500`)
+## 6. Field mapping
 
-- 21 observations, from 2026-09-01 to 2026-09-30
-- Same structure and same fields as the instrument
-- Missing values: none observed, but `volume_value` is `0` for every
-  observation (an index has no traded volume in this sample)
-
-## Field mapping
-
-| MarketPulse field | Source field or mapping | Status / notes |
+| MarketPulse canonical field | Sample input field | Mapping rule |
 |---|---|---|
-| date | `observation_date` | Already `YYYY-MM-DD`, no conversion needed |
-| ticker | application mapping | `AAPL` or `SP500`, taken from `canonical_ticker`, not from the Bloomberg identifier |
-| open | `open_value` | Teaching wrapper key; convert to float |
-| high | `high_value` | Teaching wrapper key; convert to float |
-| low | `low_value` | Teaching wrapper key; convert to float |
-| close | `close_value` | Teaching wrapper key; convert to float |
-| volume | `volume_value` | Teaching wrapper key; convert to int; `0` for the benchmark |
+| `date` | `observation_date` | Preserve the observation date |
+| `ticker` | `canonical_ticker` | Preserve `AAPL` or `SP500` |
+| `open` | `open_value` | Map opening value |
+| `high` | `high_value` | Map highest value |
+| `low` | `low_value` | Map lowest value |
+| `close` | `close_value` | Map closing value |
+| `volume` | `volume_value` | Map trading volume |
 
-Teaching wrapper key != Bloomberg LIVE field mnemonic. The keys above exist only
-in the approved sample. No LIVE Bloomberg field name was observed in this
-session, so none is recorded here.
+**Important:** These source field names are wrapper keys in the teaching
+fixture. They are not verified Bloomberg field mnemonics.
 
-## Canonical row target
+No unverified Bloomberg field mnemonics are specified in this document.
 
-```python
+## 7. Canonical output contract
+
+TD10 must normalize observations to the following MarketPulse structure:
+
+```json
 {
-    "date": "2026-09-01",
-    "ticker": "SP500",
-    "open": 6592.0,
-    "high": 6615.0,
-    "low": 6580.0,
-    "close": 6600.0,
-    "volume": 0,
+  "date": "YYYY-MM-DD",
+  "ticker": "AAPL",
+  "open": 0,
+  "high": 0,
+  "low": 0,
+  "close": 0,
+  "volume": 0
 }
+
+
 ```
 
-## TD10 handoff
+For benchmark observations, the canonical ticker must be `SP500`.
 
-- Access mode: APPROVED_SAMPLE
-- Instrument identifier: `AAPL US Equity` (canonical `AAPL`)
-- Benchmark identifier: `SPX Index` (canonical `SP500`)
-- Date representation: string `YYYY-MM-DD`
-- Input structure: `series[]` with `observations[]`, one dictionary per day
-- Missing fields: none in the sample; the benchmark volume is always `0`
-- Special normalization notes: convert prices to float and volume to int;
-  use `canonical_ticker` for the `ticker` field; keep Bloomberg identifiers
-  inside the provider module only
-- Expected canonical reference: `data/sample/bloomberg_reference_expected.json`
+The values above illustrate the structure only; they are not market data.
+
+## 8. Data quality and limitations
+
+- The sample contains 21 observations for each series.
+- The observed sample fields are `observation_date`, `open_value`,
+  `high_value`, `low_value`, `close_value`, and `volume_value`.
+- The fixture is not live Bloomberg output.
+- The sample's teaching values must not be presented as certified   
+  Bloomberg historical data.
+- Actual Bloomberg field mnemonics and live access details remain
+  unverified.
+
+## 9. TD10 handoff
+
+The TD10 implementation should:
+
+1. Read the approved sample fixture or the instructor-approved Bloomberg
+   source made available later.
+2. Identify the instrument and benchmark using their provider identifiers.
+3. Preserve canonical tickers `AAPL` and `SP500`.
+4. Normalize observations to the canonical MarketPulse fields.
+5. Keep provider-specific logic inside the Bloomberg provider boundary.
+6. Reuse the existing analytics layer rather than changing its contract.
+7. Avoid committing credentials, tokens, or session information.
+
+## 10. Conclusion
+
+This document establishes the mapping contract for the `APPROVED_SAMPLE`
+mode. It does not claim that a live Bloomberg connection has been tested.
