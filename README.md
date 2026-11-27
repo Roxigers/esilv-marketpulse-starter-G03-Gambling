@@ -51,6 +51,83 @@
   </a>
 </p>
 
+
+## G03 - Gambling | Final MarketPulse Application
+
+This repository contains the MarketPulse implementation developed by Team G03 - Gambling.
+
+### Final configuration
+
+- Instrument: AAPL - Apple Inc.
+- Benchmark: SP500 - S&P 500
+- Period: 1 month
+- Interval: Daily
+- Provider: Bloomberg stage
+- Access mode: APPROVED_SAMPLE
+
+The Bloomberg provider uses instructor-approved educational sample data.
+
+No live Bloomberg connection is required or claimed.
+
+### Installation
+
+Clone the team repository:
+
+```bash
+git clone https://github.com/Roxigers/esilv-marketpulse-starter-G03-Gambling.git
+cd esilv-marketpulse-starter-G03-Gambling
+```
+
+Install the Python dependencies:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+### Run MarketPulse
+
+Terminal application:
+
+```bash
+python3 src/main.py
+```
+
+Dash dashboard:
+
+```bash
+python3 src/dashboard.py
+```
+
+Open the dashboard in a browser:
+
+http://127.0.0.1:8050/
+
+### Application architecture
+
+- `src/providers/`: market data acquisition and normalization
+- `src/analytics.py`: financial calculations
+- `src/main.py`: shared market snapshot and terminal output
+- `src/dashboard.py`: interactive financial dashboard
+
+Both terminal and dashboard use the same financial results.
+
+### Evidence
+
+Individual practical work is stored in:
+
+- `result/TD07/` to `result/TD11/`
+- `evidence/checkpoint-a/`
+- `evidence/checkpoint-b/`
+
+Checkpoint C evidence will be prepared during TD12.
+
+### Environment
+
+The application was developed and tested on macOS with Python 3.9.
+
+The approved Bloomberg sample does not require Bloomberg credentials.
+
+
 ## What students build
 
 MarketPulse starts deliberately small and evolves across 12 practical labs.
