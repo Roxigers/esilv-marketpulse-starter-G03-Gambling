@@ -291,6 +291,33 @@ Dashboard, introduced in TD11:
 python src/dashboard.py
 ```
 
+## Final integration validation (TD12)
+
+Install the direct project dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Run the terminal application:
+
+```bash
+python src/main.py
+```
+
+Run the Dash dashboard:
+
+```bash
+python src/dashboard.py
+```
+
+The terminal application and Dash dashboard consume the shared application snapshot produced by `build_market_snapshot(...)`.
+
+The current Bloomberg teaching mode is `APPROVED_SAMPLE`. It uses instructor-approved sample data and does not represent a live Bloomberg connection.
+
+The CORE integration is validated when both runtime commands execute successfully and the dashboard displays the same instrument, benchmark and performance results as the terminal application.
+
+
 These are the two canonical CORE runtime commands.
 
 The instructor starter repository does not necessarily contain every later-stage student file on day one. Files appear progressively during the lab sequence.
